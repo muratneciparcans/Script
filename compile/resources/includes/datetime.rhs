@@ -1,0 +1,136 @@
+<|
+/*
+	File				: datetime.rhs
+	Description			: A simple dateTime class.  
+	Author(s)			: Talha Zekeriya Durmuþ
+	Date 				: Tue Jun 25 2013
+	RhS Version			: 2.0.0
+*/
+
+Mod _dateTime{
+	days = [0: "Sunday", 1: "Monday", 2: "Tuesday", 3: "Wednesday", 4: "Thursday", "5": "Friday", "6": "Saturday"]
+	dayAbrv = [0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat"]
+	months = [1: "January", 2: "February", 3: "March", 4: "April", 5: "May", 6: "June", 7: "July", 8: "August", 9: "September", 10: "October", 11: "November", 12: "December"]
+	monthAbrv = [1: "Jan", 2: "Feb", 3: "Mar", 4: "Apr", 5: "May", 6: "Jun", 7: "Jul", 8: "Aug", 9: "Sep", 10: "Oct", 11: "Nov", 12: "Dec"]
+	lastDayNonLeap = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365]
+	lastDayLeap = [0, 31, 60, 91, 121, 152, 182, 213, 244, 274, 305, 335, 366]
+
+	Fn getDayName(day_number){
+		if (day_number in days) return days[day_number]
+		else return ""
+	}
+	Fn getDayAbrv(day_number){
+		if (day_number in days) return dayAbrv[day_number]
+		else return ""
+	}
+	Fn getMonthName(month_number){
+		if (month_number in months) return months[month_number]
+		else return ""
+	}
+	Fn getMonthAbrv(month_number){
+		if (month_number in monthAbrv) return monthAbrv[month_number]
+		else return ""
+	}
+	Fn represent(){
+		return get()
+	}
+	Fn stringToDate(date, format){
+		dMask = ['h': 'hour', 'i': 'minute', 's': 'second', 'y': 'year', 'm': 'month', 'd': 'mday'];
+		dt = ['hour': "", "minute": "", "second": "", "year": "", "yday": "", "month": "", "mday": ""];
+		i = 0;
+		while(i < date.length) {
+			if (format[i] in dMask){
+				dt[dMask[format[i]]] = dt[dMask[format[i]]] + date[i];
+			}
+			i=i+1;
+		}
+		return dt;
+	}
+	Fn timestampToDate(ct=-1){
+		if(ct==-1) ct = clocktime()
+		ct += self.parent.utc;
+		self.second = ct % 60
+		ct /= 60
+		self.minute = ct.toint % 60
+		ct /= 60
+		self.hour = ct % 24;
+		self.hour = floor(self.hour + 1)
+		ct /= 24;
+		self.yday = floor((ct % 365.25) + 1.50);
+		d = self.dayOfYear(self.yday);
+		self.month = d[0];
+		self.mday = d[1];
+		self.year = floor(1970 + ct / 365.25);	
+	}
+	Fn fillWith(str, c, d){
+		return d * (c - str.length) + str;
+	}
+	Fn get(format="y-m-d G:i:s"){
+		return format.replace("y", self.year).replace("m", self.month.str).replace("d", self.mday.str).replace("G", self.hour.str).replace("i", self.minute).replace("s", fillWith(self.second.str, 2, "0")).replace("h", fillWith(self.hour.str, 2, "0")).replace("M", getMonthName(self.month))
+	}
+	Fn toString(){
+		return get("y-m-d G:i:s")
+	}
+	Fn format(str, *arr){
+		i = 0
+		while(i<arr.length){
+			str.replace("{" + i.str + "}", arr[i].str)
+			i+=1
+		}
+		return str
+	}
+	Fn dayOfYear(day){
+		lastDay = lastDayLeap;
+		i=1;
+		_day = 0;
+		_month = 0;
+		for ;i<lastDay.length; i++;{
+			if (day <= lastDay[i]){
+				_day = day - lastDay[i - 1];
+				_month = i
+				break
+			}
+		}
+		return [_month, _day];
+	}
+	Fn this(parent, _date=""){
+		self.parent = parent
+		self.second = self.year = self.minute = self.hour = 0
+		self.yday = self.month = self.mday = 1
+		if(_date=="") timestampToDate()
+		else{
+			sd = stringToDate(_date, "yyyy-mm-dd hh:ii:ss");
+			if(sd["second"]!="") self.second = sd["second"]
+			else self.second=0
+			if(sd["year"]!="") self.year = sd["year"]
+			else self.year=0
+			if(sd["minute"]!="") self.minute = sd["minute"]
+			else self.minute=0
+			if(sd["hour"]!="") self.hour = sd["hour"]
+			else self.hour=0
+			if(sd["yday"]!="") self.yday = sd["yday"]
+			else self.yday=0
+			if(sd["month"]!="") self.month = sd["month"]
+			else self.month=0
+			if(sd["mday"]!="") self.mday = sd["mday"]
+			else self.mday=0
+		}
+	}
+}
+
+Mod _dateTimeM{
+	utc = 0
+	Fn this(){
+	}
+	Fn timezoneSet(tz1=0, tz2=0){
+		self.utc = tz1*60*60 + tz2*60;
+	}
+	Fn dateTime(_date=""){
+		return _dateTime(self, _date)
+	}
+}
+_dateTime_ = _dateTimeM();
+dateTime = _dateTime_.dateTime;
+timezoneSet = _dateTime_.timezoneSet;
+timezoneSet(2)
+|>

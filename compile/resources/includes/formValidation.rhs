@@ -1,0 +1,232 @@
+﻿<|
+/*
+	File				: formValidation.rhs
+	Description			: A simple validation module for forms.  
+	Author(s)			: Talha Zekeriya Durmuş
+	Date 				: Saturday Jun 29 2013
+	RhS Version			: 2.0.1
+	Orginal Source		: http://www.jasonashdown.co.uk/2008/08/php-validation-class-for-forms/
+*/
+	Mod validateForm{
+		errors = {}
+		pass = true
+		error_wrapper = {}
+		Fn this(input){
+			self.input = loop_clean(input);
+			self.error_wrapper['start'] = "";
+			self.error_wrapper['end'] = "";
+		}
+		Fn loop_clean(data){
+			data.keys.each(|key|){
+				data[key] = escape(data[key]);
+			}
+			return data;
+		}
+/***********************************/
+/* Error Functions                 */
+/***********************************/
+		Fn error(item, desc){
+			self.pass = false;
+			if(item in self.errors){
+				self.errors[item] += desc + " ";
+			}else{
+				self.errors[item] = desc + " ";
+			}
+		}
+		Fn showError(item){
+			return error_wrapper['start'] + error[item].strip + error_wrapper['end'];
+		}
+		Fn allErrors(masks={}){
+			self.errors.keys.each(|key|){
+				value = errors[key]
+				if(key in masks && masks[key] != ''){
+					key = masks[key];
+				}
+				print(error_wrapper['start']+""+key+": "+value.strip+error_wrapper['end']);
+			}
+		}
+
+/************************************
+/* Debugging                       */
+/***********************************/
+		Fn showInputs(){
+			print(self.input);
+		}
+/************************************/
+/* Validation Functions             */
+/************************************/
+		Fn not_equal(string, field){
+			if ( getType(string)=="STRING"){
+				if (string == input[field]){
+					msg = "You must select a different option other than \""+string+"\"";
+					error(field, msg);
+					return false;
+				}
+				return true;
+			}
+			return false;
+		}
+		Fn min_length(min, field){
+			if( input[field].length < min ){
+				error(field, "This field cannot be shorter than "+min.str+" characters.");
+				return false;
+			}
+			return true;			
+		}
+		Fn max_length(max, field){
+			if( field in input && input[field].length > max ){
+				error(field, "This field cannot be longer than "+max.str+" characters.");
+				return false;
+			}
+			return true;			
+		}
+		Fn alpha(field){
+			if ( regex(r"^([a-zA-Z])+$").match(input[field]).length!=1 ){
+				msg = "This field can only contain letters (A-Z). No foreign characters allowed.";
+				error(field, msg);
+				return false;
+			}
+			return true;
+		}
+		Fn alpha_dotdash(field){
+			if ( regex(r"^([a-zA-Z-.])+$").match(input[field]).length!=1 ){
+				msg = "This field can only contain characters (A-Z-.). No foreign characters allowed.";
+				error(field, msg);
+				return false;
+			}
+			return true;
+		}
+		Fn alpha_special(field){
+			if ( regex("^([a-z0-9-+.,_='\"@#])+$").match(input[field]).length!=1 ){
+				msg = "This field has illegal characters. You can use letters, numbers && (._-+='\"@#).";
+				error(field, msg);
+				return false;
+			}
+			return true;
+		}
+		Fn numeric(field){
+			if ( regex(r"^[\-+]?[0-9]*\.?[0-9]+$").match(input[field]).length != 1 ){
+				error(field, "This field must contain only numbers.");
+				return false;
+			}
+			return true;
+		}
+
+		Fn alpha_numeric(field){
+			if( regex("^([a-z0-9])+$").match(input[field]).length!=0 ){
+				msg = "This field can only contain letters && numbers.";
+				error(field, msg);
+				return false;
+			}
+			return true;
+		}
+		
+		Fn required(field){
+			if ( !(field in self.input) || self.input[field] == '' ){
+				error(field, 'Bu alan gerekli!');
+				return false;
+			}elif (getType(self.input[field]) != "STRING"){
+				self.error(field, 'Bu bir metin değil');
+				return false;
+			}
+			return true;
+		}
+/************************************/
+/* Alias Functions                  */
+/************************************/
+
+
+		Fn fullname(field, req=true){
+			if ( req == true && !required(field) ){
+				return false;
+			}
+			return alpha_dotdash(field);
+		}
+
+		Fn address(field, req=true){
+			if ( req == true && !required(field) ){
+				return false;
+			}
+
+			return alpha_special(field);
+		}
+		Fn telephone(field, req=true){
+			if ( req == true && !required(field) ){
+				return false;
+			}
+			if ( numeric(field) && min_length(11, field) && max_length(14, field) ){
+				return true;
+			}
+			return false;
+		}
+		Fn mobile(field, req=true){
+			if ( req == true && !required(field) ){
+				return false;
+			}
+			return telephone(field);
+		}
+
+		Fn postcode(field, req=true){
+			if ( req == true && !required(field) ){
+				return false;
+			}
+			if ( regex("^[a-zA-Z]{1,3}[0-9]{1,3} [0-9]{1}[a-zA-Z]{2}$").match(input[field]) ){
+				msg = "Postcode must follow the format of \"XX1 1XX\".";
+				error(field, msg);
+				return false;
+			}
+			return true;
+		}
+
+		
+		Fn email(field, req=true){
+			if ( req == true && !required(field) ){
+				return true;
+			}
+			if ( regex(r"\b[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}\b").match(input[field]).length != 1 ){
+				error(field, "This email address is not valid");
+				return false;
+			}
+			return true;
+		}
+
+		
+/************************************/
+/* Helper Functions                 */
+/************************************/
+
+		Fn decode(field){
+			return html_entity_decode(input[field]);
+		}
+
+		Fn label(text, id){
+			return text;
+		}
+
+		Fn check(field, value, default=false){
+			if ( default == true && input[field]=="" ){
+				return 'checked="checked"';
+			}
+			if(input[field] == value){
+				return 'checked="checked"';
+			}else{
+				return '';
+			}
+		}
+
+		Fn selected(field, value, default=false){
+			if ( default == true && input[field]=="" ){
+				return 'selected="selected"';
+			}
+
+			if(input[field] == value){
+				return 'selected="selected"';
+			}else{
+				return '';
+			}
+		}
+
+		
+		
+	}
+|>
